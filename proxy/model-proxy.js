@@ -22,15 +22,29 @@ const MODEL_REMAP = {
         'claude-sonnet-4-5-20250929': 'deepseek/deepseek-v4-flash',
         'claude-haiku-4-5-20251001':  'deepseek/deepseek-v4-flash',
     },
+    xiaomi: {
+        'claude-opus-4-6':    'mimo-v2.6-pro',
+        'claude-opus-4-7':    'mimo-v2.6-pro',
+        'claude-sonnet-4-6':  'mimo-v2.6-pro',
+        'claude-sonnet-4-5-20250929': 'mimo-v2.6-pro',
+        'claude-haiku-4-5-20251001':  'mimo-v2.6-flash',
+    },
 };
 
 const PRICING_PER_M = {
     deepseek:   { input: 0.44,  output: 0.87 },
     openrouter: { input: 0.44,  output: 0.87 },
     fireworks:  { input: 1.74,  output: 3.48 },
+    xiaomi:     { input: 0.435, output: 0.87 },
     anthropic:  { input: 3.00,  output: 15.00 },
     _single:    { input: 0.44,  output: 0.87 },
 };
+
+function authStyleFor(url) {
+    if (url.includes('openrouter') || url.includes('fireworks')) return 'bearer';
+    if (url.includes('xiaomimimo')) return 'api-key';
+    return 'x-api-key';
+}
 
 /**
  * Transform stream that intercepts SSE events and injects missing `usage`
@@ -125,7 +139,7 @@ function stripUnsignedThinkingBlocks(body) {
 export function startModelProxy({ targetUrl, apiKey, startPort = 3200, backends, defaultMode }) {
     return new Promise((resolve, reject) => {
         const initialTarget = new URL(targetUrl);
-        const initialBearer = targetUrl.includes('openrouter') || targetUrl.includes('fireworks');
+        const initialAuthStyle = authStyleFor(targetUrl);
 
         const allBackends = {};
         if (backends) {
@@ -133,7 +147,7 @@ export function startModelProxy({ targetUrl, apiKey, startPort = 3200, backends,
                 allBackends[name] = {
                     target: new URL(cfg.url),
                     apiKey: cfg.apiKey,
-                    useBearer: cfg.url.includes('openrouter') || cfg.url.includes('fireworks'),
+                    authStyle: authStyleFor(cfg.url),
                 };
             }
         }
@@ -144,8 +158,8 @@ export function startModelProxy({ targetUrl, apiKey, startPort = 3200, backends,
             mode: initialName || '_single',
             target: startBackend ? startBackend.target : initialTarget,
             apiKey: startBackend ? startBackend.apiKey : apiKey,
-            useBearer: startBackend ? startBackend.useBearer : initialBearer,
-            hadNonAnthropicSession: !!startBackend,
+            authStyle: startBackend ? startBackend.authStyle : initialAuthStyle,
+            hadNonAnthropicSession: initialName !== 'anthropic',
         };
 
         let reqCount = 0;
@@ -192,7 +206,7 @@ export function startModelProxy({ targetUrl, apiKey, startPort = 3200, backends,
                 state.mode = 'anthropic';
                 state.target = new URL(ANTHROPIC_FALLBACK);
                 state.apiKey = null;
-                state.useBearer = false;
+                state.authStyle = 'x-api-key';
                 return { mode: 'anthropic', previous: prev };
             }
             const b = allBackends[name];
@@ -202,7 +216,7 @@ export function startModelProxy({ targetUrl, apiKey, startPort = 3200, backends,
             state.mode = name;
             state.target = b.target;
             state.apiKey = b.apiKey;
-            state.useBearer = b.useBearer;
+            state.authStyle = b.authStyle;
             state.hadNonAnthropicSession = true;
             return { mode: name, previous: prev };
         }
@@ -303,8 +317,11 @@ export function startModelProxy({ targetUrl, apiKey, startPort = 3200, backends,
             if (isModelCall) {
                 delete headers['authorization'];
                 delete headers['x-api-key'];
-                if (state.useBearer) {
+                delete headers['api-key'];
+                if (state.authStyle === 'bearer') {
                     headers['authorization'] = `Bearer ${state.apiKey}`;
+                } else if (state.authStyle === 'api-key') {
+                    headers['api-key'] = state.apiKey;
                 } else {
                     headers['x-api-key'] = state.apiKey;
                 }

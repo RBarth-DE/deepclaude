@@ -5,7 +5,18 @@ const BACKEND_DEFS = {
     deepseek: { url: 'https://api.deepseek.com/anthropic', keyEnv: 'DEEPSEEK_API_KEY' },
     openrouter: { url: 'https://openrouter.ai/api/v1', keyEnv: 'OPENROUTER_API_KEY' },
     fireworks: { url: 'https://api.fireworks.ai/inference/v1', keyEnv: 'FIREWORKS_API_KEY' },
+    xiaomi: { url: 'https://api.xiaomimimo.com/anthropic', keyEnv: 'XIAOMI_API_KEY' },
 };
+
+function backendNameFromUrl(url) {
+    try {
+        const host = new URL(url).hostname;
+        for (const [name, def] of Object.entries(BACKEND_DEFS)) {
+            if (new URL(def.url).hostname === host) return name;
+        }
+    } catch {}
+    return null;
+}
 
 // Legacy mode: start-proxy.js <targetUrl> <apiKey> (used by deepclaude.sh/ps1)
 const targetUrl = process.argv[2] || process.env.CHEAPCLAUDE_TARGET_URL;
@@ -24,7 +35,7 @@ if (targetUrl && apiKey) {
         targetUrl,
         apiKey,
         backends: hasBackends ? backends : undefined,
-        defaultMode: hasBackends ? undefined : undefined,
+        defaultMode: backendNameFromUrl(targetUrl) ?? undefined,
     });
     console.log(port);
 } else {

@@ -61,6 +61,7 @@ deepclaude                  # Launch Claude Code with DeepSeek V4 Pro
 deepclaude --status         # Show available backends and keys
 deepclaude --backend or     # Use OpenRouter (cheapest, $0.44/M input)
 deepclaude --backend fw     # Use Fireworks AI (fastest, US servers)
+deepclaude --backend xm     # Use Xiaomi MiMo (Anthropic-compatible, $0.435/M input)
 deepclaude --backend anthropic  # Normal Claude Code (when you need Opus)
 deepclaude --cost           # Show pricing comparison
 deepclaude --benchmark      # Latency test across all providers
@@ -89,6 +90,7 @@ Claude Code reads these environment variables to determine where to send API cal
 | **DeepSeek** (default) | `--backend ds` | $0.44 | $0.87 | China | Auto context caching (120x cheaper on repeat turns) |
 | **OpenRouter** | `--backend or` | $0.44 | $0.87 | US | Cheapest, lowest latency from US/EU |
 | **Fireworks AI** | `--backend fw` | $1.74 | $3.48 | US | Fastest inference |
+| **Xiaomi MiMo** | `--backend xm` | $0.435 | $0.87 | China | Anthropic-compatible (`api-key` auth) |
 | **Anthropic** | `--backend anthropic` | $3.00 | $15.00 | US | Original Claude Opus (for hard problems) |
 
 ### Setup per backend
@@ -109,6 +111,12 @@ export OPENROUTER_API_KEY="sk-or-..."    # macOS/Linux
 ```bash
 setx FIREWORKS_API_KEY "fw_..."          # Windows
 export FIREWORKS_API_KEY="fw_..."        # macOS/Linux
+```
+
+**Xiaomi MiMo** (optional):
+```bash
+setx XIAOMI_API_KEY "sk-..."             # Windows
+export XIAOMI_API_KEY="sk-..."           # macOS/Linux
 ```
 
 ## Cost comparison
@@ -197,12 +205,19 @@ curl -sX POST http://127.0.0.1:3200/_proxy/mode -d "backend=openrouter"
 If successful, say: "Switched to OpenRouter."
 ```
 
-Then type `/deepseek`, `/anthropic`, or `/openrouter` in any Claude Code session to switch instantly.
+**`xiaomi.md`:**
+```
+Switch the model proxy to Xiaomi MiMo. Run this command silently and report the result:
+curl -sX POST http://127.0.0.1:3200/_proxy/mode -d "backend=xiaomi"
+If successful, say: "Switched to Xiaomi MiMo."
+```
+
+Then type `/deepseek`, `/anthropic`, `/openrouter`, or `/xiaomi` in any Claude Code session to switch instantly.
 
 ### Option 2: CLI flag
 
 ```bash
-deepclaude --switch deepseek    # or: ds, or, fw, anthropic
+deepclaude --switch deepseek    # or: ds, or, fw, xm, anthropic
 deepclaude -s anthropic
 ```
 
@@ -297,6 +312,7 @@ Open a Claude Code session in any browser - with DeepSeek as the brain:
 ```bash
 deepclaude --remote                # Remote control + DeepSeek
 deepclaude --remote -b or          # Remote control + OpenRouter
+deepclaude --remote -b xm          # Remote control + Xiaomi MiMo
 deepclaude --remote -b anthropic   # Remote control + Anthropic (normal)
 ```
 
